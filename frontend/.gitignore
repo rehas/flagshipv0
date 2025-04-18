@@ -35,4 +35,4 @@ coverage
 .env.production
 node_modules
 node_modules/*
-
+package-lock.json
