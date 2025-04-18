@@ -1,0 +1,27 @@
+{
+    "video_path": "data/cctv_cafe.mp4",
+    "employee_count": 19,
+    "distance_traveled": {
+        "employee_1": 538.34,
+        "employee_2": 136.79,
+        "employee_3": 369.13,
+        "employee_4": 33.32,
+        "employee_5": 3.47,
+        "employee_6": 1.37,
+        "employee_7": 748.89,
+        "employee_11": 146.18,
+        "employee_12": 3.62,
+        "employee_13": 29.08,
+        "employee_17": 261.28,
+        "employee_19": 60.79,
+        "employee_21": 5.94,
+        "employee_24": 14.84,
+        "employee_25": 6.26,
+        "employee_26": 174.47,
+        "employee_27": 10.83,
+        "employee_28": 2.13,
+        "employee_30": 31.43
+    },
+    "heatmap_image_path": "outputs/heatmaps/heatmap_cctv_cafe_20250418_123906.png",
+    "timestamp": "2025-04-18T12:39:06.130925"
+}

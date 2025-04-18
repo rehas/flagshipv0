@@ -1,0 +1,10 @@
+{
+  "videos": {
+    "cctv_cafe.mp4": {
+      "last_analyzed": "2025-04-18T12:39:06.131586",
+      "results_file": "results_cctv_cafe_20250418123906.json",
+      "heatmap_file": "heatmap_cctv_cafe_20250418123906.png"
+    }
+  },
+  "latest_video": "cctv_cafe.mp4"
+}
