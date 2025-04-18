@@ -1,16 +1,21 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import VideoListView from '../views/VideoListView.vue'
+import VideoDetailView from '../views/VideoDetailView.vue'
 
 const router = createRouter({
   history: createWebHistory('/'),
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
+      name: 'videos',
+      component: VideoListView
     },
-    
-  ],
+    {
+      path: '/video/:name',
+      name: 'video',
+      component: VideoDetailView
+    }
+  ]
 })
 
 export default router

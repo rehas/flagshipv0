@@ -1,9 +1,19 @@
+export interface VideoListItem {
+    name: string;
+    last_analyzed: string;
+}
+
 export interface ApiResponse<T> {
     data: T;
     status: number;
     message?: string;
 }
   
+export interface Video {
+    name: string;
+    last_analyzed: string;
+}
+
 export interface VideoStats {
     viewers: number;
     likes: number;
@@ -26,15 +36,10 @@ export interface VideoAnalysis {
 }
 
 export interface VideoAnalytics {
-    viewCount: number;
-    averageWatchTime: number;
-    engagementRate: number;
-    peakViewerCount: number;
-    totalWatchTime: number;
-    demographics: {
-        age: Record<string, number>;
-        location: Record<string, number>;
-    };
+    employee_count: number;
+    distance_traveled: object;
+    heatmap_image_path: string;
+  
 }
 
 export interface HeatmapData {

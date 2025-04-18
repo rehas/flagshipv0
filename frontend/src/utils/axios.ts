@@ -7,20 +7,16 @@ export interface ApiResponse<T = any> {
 }
 
 const apiClient: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:3000', // Update this with your backend URL
+  baseURL: import.meta.env.VITE_API_URL, 
   headers: {
     'Content-Type': 'application/json',
+    'ngrok-skip-browser-warning': true,
   },
 });
 
 // Request interceptor
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // You can add auth token here if needed
-    // const token = localStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
     return config;
   },
   (error: AxiosError) => {

@@ -1,20 +1,28 @@
 import apiClient from '../utils/axios';
-import type { ApiResponse, VideoStats, VideoAnalysis, VideoAnalytics, VideoStatus, HeatmapData } from '../types/types';
+import type { ApiResponse, Video, VideoStats, VideoAnalysis, VideoAnalytics, VideoStatus, HeatmapData, VideoListItem } from '../types/types';
 
 
 // API Functions
 export const videoApi = {
+    getVideo: async (videoId: string): Promise<ApiResponse<Video>> => {
+        const response = await apiClient.get<ApiResponse<Video>>(`/video/${videoId}`);
+        return response.data;
+    },
+  // List all available videos
+  listVideos: async (): Promise<VideoListItem[]> => {
+    const response = await apiClient.get<VideoListItem[]>('/videos');
+    return response.data;
+  },
+
   // Analyze video endpoint
   analyzeVideo: async (videoId: string): Promise<ApiResponse<VideoAnalysis>> => {
-    const response = await apiClient.post<ApiResponse<VideoAnalysis>>('/analyze-video', {
-      videoId
-    });
+    const response = await apiClient.post<ApiResponse<VideoAnalysis>>('/analytics', { video_name: videoId });
     return response.data;
   },
 
   // Get video analytics
-  getAnalytics: async (videoId: string, timeRange?: { start: string; end: string }): Promise<ApiResponse<VideoAnalytics>> => {
-    const response = await apiClient.get<ApiResponse<VideoAnalytics>>('/analytics', {
+  getAnalytics: async (videoId: string, timeRange?: { start: string; end: string }): Promise<VideoAnalytics> => {
+    const response = await apiClient.get<VideoAnalytics>('/analytics', {
       params: {
         videoId,
         ...timeRange
