@@ -1,11 +1,12 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks, APIRouter, Query
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from pydantic import BaseModel
 import os
 from pathlib import Path
 import shutil
 import time
 from typing import Optional, List
+import cv2
 
 from .detection import EmployeeDetector
 from .tracking import EmployeeTracker
@@ -208,6 +209,61 @@ async def get_status():
             else None
         )
     }
+
+@api_router.get("/stream/{video_name}")
+async def stream_video(video_name: str):
+    """Stream a video file by name."""
+    # Construct path to the video file
+    video_path = os.path.join("data", video_name)
+    
+    # Check if the video file exists
+    if not os.path.exists(video_path):
+        raise HTTPException(status_code=404, detail=f"Video file not found: {video_name}")
+    
+    # Define a generator function to stream the file
+    def iterfile():
+        with open(video_path, "rb") as file:
+            # Read and yield chunks of the file
+            while chunk := file.read(1024 * 1024):  # 1MB chunks
+                yield chunk
+    
+    # Determine the media type based on file extension
+    media_type = None
+    if video_name.endswith(".mp4"):
+        media_type = "video/mp4"
+    elif video_name.endswith(".avi"):
+        media_type = "video/x-msvideo"
+    elif video_name.endswith(".mov"):
+        media_type = "video/quicktime"
+    else:
+        media_type = "application/octet-stream"  # Generic binary
+    
+    # Return a streaming response
+    return StreamingResponse(
+        iterfile(),
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename={video_name}"}
+    )
+
+@api_router.get("/available-videos", response_model=List[str])
+async def list_available_videos():
+    """List all video files available in the data directory."""
+    # Path to the data directory
+    data_dir = "data"
+    
+    # Supported video extensions
+    video_extensions = [".mp4", ".avi", ".mov", ".mkv", ".webm"]
+    
+    # Find all video files
+    video_files = []
+    
+    if os.path.exists(data_dir) and os.path.isdir(data_dir):
+        for file in os.listdir(data_dir):
+            # Check if the file has a video extension
+            if any(file.lower().endswith(ext) for ext in video_extensions):
+                video_files.append(file)
+    
+    return video_files
 
 # Export the router
 api = api_router 
