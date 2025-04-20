@@ -3,8 +3,12 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+from dotenv import load_dotenv
 
 from .api import api, initialize_modules
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(
     title="Warehouse CCTV Analyzer",
@@ -24,10 +28,11 @@ app.add_middleware(
 # Create outputs directory if it doesn't exist
 os.makedirs("outputs/heatmaps", exist_ok=True)
 os.makedirs("outputs/analytics", exist_ok=True)
+os.makedirs("outputs/llm_analysis", exist_ok=True)
+os.makedirs("outputs/frame_captures", exist_ok=True)
 
-# Create data directories for the video index
-os.makedirs("data/results", exist_ok=True)
-os.makedirs("data/heatmaps", exist_ok=True)
+# Create data directory if it doesn't exist
+os.makedirs("data", exist_ok=True)
 
 # Mount static files for serving heatmaps and other static content
 app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
@@ -40,6 +45,14 @@ app.include_router(api)
 @app.on_event("startup")
 async def startup_event():
     print("Initializing modules and video index...")
+    # Check for HF API token
+    hf_token = os.environ.get("HF_API_TOKEN")
+    if hf_token:
+        print("Hugging Face API token found in environment variables.")
+    else:
+        print("WARNING: Hugging Face API token not found. LLM analysis will not work.")
+        print("Create a .env file with your HF_API_TOKEN or set it in your environment.")
+        
     initialize_modules()
     print("Initialization complete!")
 
@@ -54,7 +67,12 @@ async def root():
             {"path": "/analytics", "method": "GET", "description": "Get latest analytics results"},
             {"path": "/heatmap", "method": "GET", "description": "Get heatmap visualization of employee movement"},
             {"path": "/status", "method": "GET", "description": "Get current processing status"},
-            {"path": "/videos", "method": "GET", "description": "Get list of analyzed videos"}
+            {"path": "/videos", "method": "GET", "description": "Get list of analyzed videos"},
+            {"path": "/analyze-video-llm", "method": "POST", "description": "Analyze video with multimodal LLM"},
+            {"path": "/llm-analysis", "method": "GET", "description": "Get LLM analysis results"},
+            {"path": "/llm-analyzed-videos", "method": "GET", "description": "Get list of videos analyzed with LLM"},
+            {"path": "/available-videos", "method": "GET", "description": "Get list of all video files available"},
+            {"path": "/stream/{video_name}", "method": "GET", "description": "Stream a video file"}
         ],
         "docs_url": "/docs"
     }

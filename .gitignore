@@ -1,2 +1,8 @@
 .DS_Store
 backend/tasklist
+backend/.env
+backend/outputs/*
+backend/data/heatmaps/*
+backend/data/results/*
+backend/data/llm_results/*
+backend/data/*.mp4

@@ -11,6 +11,8 @@ import cv2
 from .detection import EmployeeDetector
 from .tracking import EmployeeTracker
 from .analytics import WarehouseAnalytics
+from .gptanalyzer import MultimodalLLMAnalyzer
+from .videomanager import VideoManager
 
 # Define API models
 class VideoAnalysisRequest(BaseModel):
@@ -24,15 +26,22 @@ class VideoAnalysisResponse(BaseModel):
 class VideoInfo(BaseModel):
     name: str
     last_analyzed: str
+
+class LLMAnalysisRequest(BaseModel):
+    video_path: str
+    frame_interval: Optional[int] = 30  # Analyze every 30 frames by default
     
 # Initialize global state
 detector = None
 tracker = None
 analytics = None
+llm_analyzer = None
+video_manager = None
 
 # Track processing status
 analysis_status = {
     "is_processing": False,
+    "llm_processing": False,
     "last_video_path": None,
     "start_time": None,
     "end_time": None
@@ -40,7 +49,7 @@ analysis_status = {
 
 def initialize_modules():
     """Initialize all required modules."""
-    global detector, tracker, analytics
+    global detector, tracker, analytics, llm_analyzer, video_manager
     
     if detector is None:
         detector = EmployeeDetector()
@@ -50,10 +59,12 @@ def initialize_modules():
     
     if analytics is None:
         analytics = WarehouseAnalytics()
-        
-    # Initialize the video index
-    if analytics:
-        analytics.initialize_video_index()
+    
+    if llm_analyzer is None:
+        llm_analyzer = MultimodalLLMAnalyzer()
+    
+    if video_manager is None:
+        video_manager = VideoManager()
 
 def process_video_task(video_path: str):
     """Background task to process video.
@@ -84,7 +95,7 @@ def process_video_task(video_path: str):
         
         # Step 4: Update the video index with the results
         heatmap_path = results.get("heatmap_image_path", "")
-        analytics.update_video_index(video_path, results, heatmap_path)
+        video_manager.update_video_index(video_path, results, heatmap_path)
         
         # Update status
         analysis_status["is_processing"] = False
@@ -95,6 +106,41 @@ def process_video_task(video_path: str):
         analysis_status["is_processing"] = False
         analysis_status["end_time"] = time.time()
         print(f"Error processing video: {str(e)}")
+
+def process_video_with_llm_task(video_path: str, frame_interval: int = 30):
+    """Background task to analyze video with LLM.
+    
+    Args:
+        video_path (str): Path to the video file to process
+        frame_interval (int): Interval between frames to analyze
+    """
+    global analysis_status
+    
+    try:
+        # Update status
+        analysis_status["llm_processing"] = True
+        analysis_status["last_video_path"] = video_path
+        analysis_status["start_time"] = time.time()
+        analysis_status["end_time"] = None
+        
+        # Initialize modules if not already initialized
+        initialize_modules()
+        
+        # Use LLM to analyze key frames
+        llm_results = llm_analyzer.extract_and_analyze_frames(video_path, frame_interval)
+        
+        # LLM results are now stored in the analyzer's latest_results
+        # We could add them to our video_manager if needed for persistence
+        
+        # Update status
+        analysis_status["llm_processing"] = False
+        analysis_status["end_time"] = time.time()
+        
+    except Exception as e:
+        # Handle errors
+        analysis_status["llm_processing"] = False
+        analysis_status["end_time"] = time.time()
+        print(f"Error in LLM video analysis: {str(e)}")
 
 # Create API router
 api_router = APIRouter()
@@ -127,6 +173,81 @@ async def analyze_video(request: VideoAnalysisRequest, background_tasks: Backgro
         }
     )
 
+@api_router.post("/analyze-video-llm")
+async def analyze_video_llm(request: LLMAnalysisRequest, background_tasks: BackgroundTasks):
+    """Analyze video using multimodal LLM."""
+    # Validate video path
+    video_path = request.video_path
+    if not os.path.exists(video_path):
+        raise HTTPException(status_code=404, detail=f"Video file not found: {video_path}")
+    
+    # Check if analysis is already running
+    if analysis_status["llm_processing"]:
+        raise HTTPException(
+            status_code=409, 
+            detail="Another video is currently being processed with LLM"
+        )
+    
+    # Initialize modules if not already initialized
+    initialize_modules()
+    
+    # Make sure the API token is set
+    if not llm_analyzer.api_token:
+        raise HTTPException(
+            status_code=400,
+            detail="Hugging Face API token not configured. Set the HF_API_TOKEN environment variable."
+        )
+    
+    # Start processing in background
+    background_tasks.add_task(
+        process_video_with_llm_task, 
+        video_path, 
+        request.frame_interval
+    )
+    
+    return JSONResponse(
+        status_code=202,
+        content={
+            "message": f"Processing video with LLM: {video_path}",
+            "status": "processing",
+            "frame_interval": request.frame_interval
+        }
+    )
+
+@api_router.get("/llm-analysis")
+async def get_llm_analysis(video_name: Optional[str] = None):
+    """Get LLM-based analysis results."""
+    # Initialize modules if not already initialized
+    initialize_modules()
+    
+    # For now, we only have the latest results since we're not storing
+    # LLM results in the VideoManager yet
+    results = llm_analyzer.get_latest_results()
+    if results is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No LLM analysis available. Process a video first."
+        )
+    
+    return results
+
+@api_router.get("/llm-analyzed-videos")
+async def list_llm_analyzed_videos():
+    """Get a list of all videos analyzed using LLM."""
+    # Initialize modules if not already initialized
+    initialize_modules()
+    
+    # This is a placeholder until we implement storage of LLM results
+    # in the VideoManager
+    if llm_analyzer.latest_results:
+        video_path = llm_analyzer.latest_results.get("video_path", "")
+        if video_path:
+            return [{
+                "name": os.path.basename(video_path),
+                "last_analyzed": llm_analyzer.latest_results.get("timestamp", "")
+            }]
+    return []
+
 @api_router.get("/analytics", response_model=VideoAnalysisResponse)
 async def get_analytics(video_name: Optional[str] = None):
     # Initialize modules if not already initialized
@@ -134,7 +255,7 @@ async def get_analytics(video_name: Optional[str] = None):
     
     # Get results for the specified video or latest
     if video_name:
-        results = analytics.get_video_results(video_name)
+        results = video_manager.get_video_results(video_name)
         if results is None:
             raise HTTPException(
                 status_code=404,
@@ -158,7 +279,7 @@ async def get_heatmap(video_name: Optional[str] = None):
     
     # Get heatmap for the specified video or latest
     if video_name:
-        heatmap_path = analytics.get_video_heatmap_path(video_name)
+        heatmap_path = video_manager.get_video_heatmap_path(video_name)
         if heatmap_path is None:
             raise HTTPException(
                 status_code=404,
@@ -185,30 +306,6 @@ async def get_heatmap(video_name: Optional[str] = None):
         media_type="image/png",
         filename=os.path.basename(heatmap_path)
     )
-
-@api_router.get("/videos", response_model=List[VideoInfo])
-async def list_videos():
-    """Get a list of all analyzed videos."""
-    # Initialize modules if not already initialized
-    initialize_modules()
-    
-    videos = analytics.list_available_videos()
-    
-    return videos
-
-@api_router.get("/status")
-async def get_status():
-    return {
-        "is_processing": analysis_status["is_processing"],
-        "last_video_path": analysis_status["last_video_path"],
-        "start_time": analysis_status["start_time"],
-        "end_time": analysis_status["end_time"],
-        "elapsed_time": (
-            time.time() - analysis_status["start_time"] 
-            if analysis_status["is_processing"] and analysis_status["start_time"] 
-            else None
-        )
-    }
 
 @api_router.get("/stream/{video_name}")
 async def stream_video(video_name: str):
@@ -248,22 +345,35 @@ async def stream_video(video_name: str):
 @api_router.get("/available-videos", response_model=List[str])
 async def list_available_videos():
     """List all video files available in the data directory."""
-    # Path to the data directory
-    data_dir = "data"
+    # Initialize modules if not already initialized
+    initialize_modules()
     
-    # Supported video extensions
-    video_extensions = [".mp4", ".avi", ".mov", ".mkv", ".webm"]
+    # Get list of available videos from VideoManager
+    return video_manager.list_available_videos()
+
+@api_router.get("/videos", response_model=List[VideoInfo])
+async def list_videos():
+    """Get a list of all analyzed videos."""
+    # Initialize modules if not already initialized
+    initialize_modules()
     
-    # Find all video files
-    video_files = []
-    
-    if os.path.exists(data_dir) and os.path.isdir(data_dir):
-        for file in os.listdir(data_dir):
-            # Check if the file has a video extension
-            if any(file.lower().endswith(ext) for ext in video_extensions):
-                video_files.append(file)
-    
-    return video_files
+    # Get list of analyzed videos from VideoManager
+    return video_manager.list_analyzed_videos()
+
+@api_router.get("/status")
+async def get_status():
+    return {
+        "is_processing": analysis_status["is_processing"],
+        "llm_processing": analysis_status.get("llm_processing", False),
+        "last_video_path": analysis_status["last_video_path"],
+        "start_time": analysis_status["start_time"],
+        "end_time": analysis_status["end_time"],
+        "elapsed_time": (
+            time.time() - analysis_status["start_time"] 
+            if (analysis_status["is_processing"] or analysis_status.get("llm_processing", False)) and analysis_status["start_time"] 
+            else None
+        )
+    }
 
 # Export the router
 api = api_router 

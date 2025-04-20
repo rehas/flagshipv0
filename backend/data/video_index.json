@@ -4,7 +4,32 @@
       "last_analyzed": "2025-04-18T12:39:06.131586",
       "results_file": "results_cctv_cafe_20250418123906.json",
       "heatmap_file": "heatmap_cctv_cafe_20250418123906.png"
+    },
+    "cctv_cafe1.mp4": {
+      "last_analyzed": "2025-04-18T13:38:08.221409",
+      "results_file": "results_cctv_cafe1_20250418133808.json",
+      "heatmap_file": "heatmap_cctv_cafe1_20250418133808.png"
+    },
+    "cctv_cafe3.mp4": {
+      "last_analyzed": "2025-04-18T13:39:24.381394",
+      "results_file": "results_cctv_cafe3_20250418133924.json",
+      "heatmap_file": "heatmap_cctv_cafe3_20250418133924.png"
+    },
+    "cctv_cafe2.mp4": {
+      "last_analyzed": "2025-04-18T13:40:56.672520",
+      "results_file": "results_cctv_cafe2_20250418134056.json",
+      "heatmap_file": "heatmap_cctv_cafe2_20250418134056.png"
+    },
+    "warehouse_close.mp4": {
+      "last_analyzed": "2025-04-18T14:41:43.851103",
+      "results_file": "results_warehouse_close_20250418144143.json",
+      "heatmap_file": "heatmap_warehouse_close_20250418144143.png"
+    },
+    "warehouse2.mp4": {
+      "last_analyzed": "2025-04-20T14:25:52.881659",
+      "results_file": "results_warehouse2_20250420142552.json",
+      "heatmap_file": "heatmap_warehouse2_20250420142552.png"
     }
   },
-  "latest_video": "cctv_cafe.mp4"
+  "latest_video": "warehouse2.mp4"
 }
