@@ -35,9 +35,6 @@ class EmployeeTracker:
                 [track_id, class_id, x1, y1, x2, y2]
         """
         try:
-            # Print detections info for debugging
-            print(f"Detections type: {type(detections)}, shape: {getattr(detections, 'shape', 'N/A')}")
-            
             # Check if detections is a proper numpy array with the right shape
             if not isinstance(detections, np.ndarray):
                 print(f"Warning: Detections is not a numpy array. Type: {type(detections)}")
@@ -72,8 +69,6 @@ class EmployeeTracker:
                 det_tuple = (tlwh, float(confidence), 'person')
                 formatted_detections.append(det_tuple)
             
-            # Debug information
-            print(f"Formatted {len(formatted_detections)} detections for DeepSORT")
             
             # Call update_tracks with the properly formatted detections
             tracks = self.tracker.update_tracks(formatted_detections, frame=frame)
@@ -91,7 +86,6 @@ class EmployeeTracker:
                 # Assuming all detections are employees (class_id = 0)
                 results.append([track_id, 0, x1, y1, x2, y2])
             
-            print(f"Returned {len(results)} confirmed tracks")
             return results
         
         except Exception as e:

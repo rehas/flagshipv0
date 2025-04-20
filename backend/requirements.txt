@@ -9,3 +9,8 @@ deep-sort-realtime
 pandas
 numpy
 matplotlib
+requests
+pillow
+python-multipart
+huggingface_hub
+python-dotenv
