@@ -11,8 +11,8 @@ from .api import api, initialize_modules
 load_dotenv()
 
 app = FastAPI(
-    title="Warehouse CCTV Analyzer",
-    description="REST API for analyzing warehouse CCTV footage",
+    title="FlagShip AI",
+    description="REST API for analyzing CCTV footage",
     version="0.1.0"
 )
 
@@ -60,11 +60,11 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {
-        "application": "Warehouse CCTV Analyzer",
+        "application": "FlagShip AI",
         "version": "0.1.0",
         "endpoints": [
-            {"path": "/analyze-video", "method": "POST", "description": "Analyze a warehouse CCTV video"},
-            {"path": "/analytics", "method": "GET", "description": "Get latest analytics results"},
+            {"path": "/analyze-video", "method": "POST", "description": "Analyze a warehouse CCTV video (tracks employees, calculates distance and idle time)"},
+            {"path": "/analytics", "method": "GET", "description": "Get latest analytics results including employee counts, distances, and idle times"},
             {"path": "/heatmap", "method": "GET", "description": "Get heatmap visualization of employee movement"},
             {"path": "/status", "method": "GET", "description": "Get current processing status"},
             {"path": "/videos", "method": "GET", "description": "Get list of analyzed videos"},

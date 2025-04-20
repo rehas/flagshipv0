@@ -7,6 +7,8 @@ import shutil
 import time
 from typing import Optional, List
 import cv2
+import json
+from datetime import datetime
 
 from .detection import EmployeeDetector
 from .tracking import EmployeeTracker
@@ -21,6 +23,7 @@ class VideoAnalysisRequest(BaseModel):
 class VideoAnalysisResponse(BaseModel):
     employee_count: int
     distance_traveled: dict
+    idle_time: dict  # Added field for idle time per employee
     heatmap_image_path: str
     
 class VideoInfo(BaseModel):
@@ -30,6 +33,7 @@ class VideoInfo(BaseModel):
 class LLMAnalysisRequest(BaseModel):
     video_path: str
     frame_interval: Optional[int] = 30  # Analyze every 30 frames by default
+    force: Optional[bool] = False  # Default to not force re-analysis if it exists
     
 # Initialize global state
 detector = None
@@ -129,8 +133,26 @@ def process_video_with_llm_task(video_path: str, frame_interval: int = 30):
         # Use LLM to analyze key frames
         llm_results = llm_analyzer.extract_and_analyze_frames(video_path, frame_interval)
         
-        # LLM results are now stored in the analyzer's latest_results
-        # We could add them to our video_manager if needed for persistence
+        # Update the LLM analysis index if analysis was successful
+        if llm_results and "error" not in llm_results:
+            # Get the output path from the results if available, or construct it
+            if "output_path" in llm_results:
+                results_path = llm_results["output_path"]
+            else:
+                # The output path should be in the format used in extract_and_analyze_frames
+                video_name = os.path.splitext(os.path.basename(video_path))[0]
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                results_filename = f"llm_analysis_{video_name}_{timestamp}.json"
+                results_path = os.path.join("outputs", "llm_analysis", results_filename)
+                
+                # Save the results to this path if not already saved
+                os.makedirs(os.path.dirname(results_path), exist_ok=True)
+                with open(results_path, 'w') as f:
+                    json.dump(llm_results, f, indent=4)
+            
+            # Update the LLM analysis index
+            print(f"Updating LLM analysis index with results at: {results_path}")
+            video_manager.update_llm_analysis_index(video_path, results_path)
         
         # Update status
         analysis_status["llm_processing"] = False
@@ -141,6 +163,8 @@ def process_video_with_llm_task(video_path: str, frame_interval: int = 30):
         analysis_status["llm_processing"] = False
         analysis_status["end_time"] = time.time()
         print(f"Error in LLM video analysis: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
 # Create API router
 api_router = APIRouter()
@@ -181,15 +205,34 @@ async def analyze_video_llm(request: LLMAnalysisRequest, background_tasks: Backg
     if not os.path.exists(video_path):
         raise HTTPException(status_code=404, detail=f"Video file not found: {video_path}")
     
+
+    # Initialize modules if not already initialized
+    initialize_modules()
+    
+
+    
+    # Check if analysis already exists (only if force=False)
+    video_name = os.path.basename(video_path)
+    if not request.force:
+        existing_analysis_path = video_manager.get_video_llm_analysis(video_name)
+        if existing_analysis_path and os.path.exists(existing_analysis_path):
+            # Return message indicating analysis already exists
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "message": f"LLM analysis already exists for video: {video_path}",
+                    "status": "completed",
+                    "analysis_path": existing_analysis_path,
+                    "note": "Use force=True to reanalyze"
+                }
+            )
+
     # Check if analysis is already running
     if analysis_status["llm_processing"]:
         raise HTTPException(
             status_code=409, 
             detail="Another video is currently being processed with LLM"
         )
-    
-    # Initialize modules if not already initialized
-    initialize_modules()
     
     # Make sure the API token is set
     if not llm_analyzer.api_token:
@@ -374,6 +417,36 @@ async def get_status():
             else None
         )
     }
+
+@api_router.get("/llm-analysis/{video_name}")
+async def get_llm_analysis(video_name: str):
+    """Get LLM analysis results for a specific video.
+    
+    Args:
+        video_name (str): Name of the video to get analysis for
+        
+    Returns:
+        dict: LLM analysis results or error message
+    """
+    try:
+        # Get the path to the LLM analysis file
+        llm_analysis_path = video_manager.get_video_llm_analysis(video_name)
+        
+        if llm_analysis_path is None:
+            return {"error": f"No LLM analysis found for video: {video_name}"}
+        
+        # Check if file exists
+        if not os.path.exists(llm_analysis_path):
+            return {"error": f"LLM analysis file not found: {llm_analysis_path}"}
+            
+        try:
+            with open(llm_analysis_path, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            return {"error": f"Error loading LLM analysis: {str(e)}"}
+            
+    except Exception as e:
+        return {"error": f"Error retrieving LLM analysis: {str(e)}"}
 
 # Export the router
 api = api_router 

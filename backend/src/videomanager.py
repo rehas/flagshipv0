@@ -28,8 +28,9 @@ class VideoManager:
         os.makedirs(self.heatmaps_dir, exist_ok=True)
         os.makedirs(self.llm_results_dir, exist_ok=True)
         
-        # Initialize video index
+        # Initialize video index and LLM analysis index
         self.initialize_video_index()
+        self.initialize_llm_analysis_index()
         
     def initialize_video_index(self):
         """Initialize or load the video index file.
@@ -172,4 +173,81 @@ class VideoManager:
                 if any(file.lower().endswith(ext) for ext in video_extensions):
                     video_files.append(file)
         
-        return video_files 
+        return video_files
+    
+    def initialize_llm_analysis_index(self):
+        """Initialize or load the LLM analysis index file.
+        
+        Returns:
+            dict: The LLM analysis index data
+        """
+        index_path = os.path.join(self.data_dir, "llm_analysis_index.json")
+        
+        if not os.path.exists(index_path):
+            # Create empty index
+            with open(index_path, "w") as f:
+                json.dump({"videos": {}, "latest_video": None}, f)
+        
+        # Load the index
+        with open(index_path, "r") as f:
+            return json.load(f)
+            
+    def update_llm_analysis_index(self, video_path, llm_analysis_path):
+        """Update the LLM analysis index with new results.
+        
+        Args:
+            video_path (str): Path to the video file
+            llm_analysis_path (str): Path to the generated LLM analysis JSON file
+        """
+        # Get video name from path
+        video_name = os.path.basename(video_path)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        
+        # Create filename for the copied file
+        llm_results_file = f"llm_results_{os.path.splitext(video_name)[0]}_{timestamp}.json"
+        
+        # Copy analysis to storage location
+        llm_results_dest = os.path.join(self.llm_results_dir, llm_results_file)
+        shutil.copy(llm_analysis_path, llm_results_dest)
+        
+        # Update LLM analysis index
+        index = self.initialize_llm_analysis_index()
+        index["videos"][video_name] = {
+            "last_analyzed": datetime.now().isoformat(),
+            "results_file": llm_results_file
+        }
+        index["latest_video"] = video_name
+        
+        # Save updated index
+        with open(os.path.join(self.data_dir, "llm_analysis_index.json"), "w") as f:
+            json.dump(index, f, indent=2)
+            
+    def get_video_llm_analysis(self, video_name=None):
+        """Get LLM analysis results path for a specific video.
+        
+        Args:
+            video_name (str, optional): Name of the video. If None, uses latest.
+            
+        Returns:
+            str: Path to the LLM analysis results file or None if not found
+        """
+        index = self.initialize_llm_analysis_index()
+        
+        # If no video specified, use latest
+        if video_name is None:
+            video_name = index.get("latest_video")
+            if not video_name:
+                return None  # No videos processed yet
+        
+        # If video name already has an extension, remove it
+        video_name = os.path.splitext(os.path.basename(video_name))[0]
+        
+        # Find the video in the index
+        for full_video_name in index["videos"].keys():
+            base_name = os.path.splitext(full_video_name)[0]
+            if base_name == video_name:
+                # Get results path
+                results_file = index["videos"][full_video_name]["results_file"]
+                return os.path.join(self.llm_results_dir, results_file)
+        
+        return None 
