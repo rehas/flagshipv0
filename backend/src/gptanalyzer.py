@@ -290,7 +290,7 @@ class MultimodalLLMAnalyzer:
         
         
         prompt = f"""
-            Based on these detailed frame-by-frame analyses from a warehouse surveillance video:
+            Based on these frame based descriptions from a surveillance video:
             
             {all_detailed_text}
             
@@ -304,6 +304,8 @@ class MultimodalLLMAnalyzer:
         
         # Use text-based LLM for summarization
         summary_result = self._call_summary_llm(prompt)
+
+        print(f"Detailed Summary result: {summary_result}")
         
         return summary_result
 
@@ -341,10 +343,10 @@ class MultimodalLLMAnalyzer:
                 )
                 print(f"prompt: {prompt}")
                 # Actual API call with the retry mechanism active
-                summary_text = client.text_generation(prompt=prompt, model="mistralai/Mistral-7B-Instruct-v0.3")
+                generated_text = client.text_generation(prompt=prompt, model="mistralai/Mistral-7B-Instruct-v0.3")
 
                 return {
-                    "summary": summary_text,
+                    "summary": generated_text,
                     "generated_at": datetime.now().isoformat(),
                     "model_name": "mistralai/Mistral-7B-Instruct-v0.3"
                 }
