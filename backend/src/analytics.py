@@ -62,6 +62,91 @@ class WarehouseAnalytics:
                 
         return total_distance
     
+    def calculate_idle_time(self, track_positions, video_fps, movement_threshold=5.0):
+        """Calculate the idle time for an employee.
+        
+        Args:
+            track_positions (list): List of position dictionaries with x, y coordinates
+            video_fps (float): Frames per second of the video
+            movement_threshold (float): Threshold in pixels to consider as no movement
+            
+        Returns:
+            tuple: (total_idle_time_seconds, idle_periods)
+                total_idle_time_seconds (float): Total time spent idle in seconds
+                idle_periods (list): List of dictionaries with start_frame, end_frame, and duration_seconds
+        """
+        # Need at least 2 points to calculate idle time
+        if len(track_positions) < 2:
+            return 0.0, []
+        
+        idle_periods = []
+        total_idle_frames = 0
+        
+        # Frame conversion factor
+        seconds_per_frame = 1.0 / video_fps
+        
+        # Track current idle period
+        current_idle_start = None
+        consecutive_idle_frames = 0
+        
+        # Analyze movement between consecutive points
+        for i in range(1, len(track_positions)):
+            prev_pos = track_positions[i-1]
+            curr_pos = track_positions[i]
+            
+            # Calculate Euclidean distance
+            dx = curr_pos["x"] - prev_pos["x"]
+            dy = curr_pos["y"] - prev_pos["y"]
+            distance = math.sqrt(dx*dx + dy*dy)
+            
+            # Check if the employee is idle (below movement threshold)
+            if distance < movement_threshold:
+                # Employee is not moving much (idle)
+                consecutive_idle_frames += 1
+                
+                # Start new idle period if not already in one
+                if current_idle_start is None:
+                    current_idle_start = i - 1  # Start frame index
+            else:
+                # Employee is moving
+                # If we were in an idle period, end it
+                if current_idle_start is not None and consecutive_idle_frames > 0:
+                    # End the current idle period
+                    idle_period = {
+                        "start_frame": current_idle_start,
+                        "end_frame": i - 1,
+                        "duration_frames": consecutive_idle_frames + 1,  # +1 to include start frame
+                        "duration_seconds": (consecutive_idle_frames + 1) * seconds_per_frame
+                    }
+                    
+                    # Only count as idle if it lasted for more than 1 second (or some threshold)
+                    if idle_period["duration_seconds"] >= 1.0:
+                        idle_periods.append(idle_period)
+                        total_idle_frames += idle_period["duration_frames"]
+                    
+                    # Reset idle tracking
+                    current_idle_start = None
+                    consecutive_idle_frames = 0
+        
+        # Handle case where video ends with employee being idle
+        if current_idle_start is not None and consecutive_idle_frames > 0:
+            idle_period = {
+                "start_frame": current_idle_start,
+                "end_frame": len(track_positions) - 1,
+                "duration_frames": consecutive_idle_frames + 1,
+                "duration_seconds": (consecutive_idle_frames + 1) * seconds_per_frame
+            }
+            
+            # Only count as idle if it lasted for more than 1 second
+            if idle_period["duration_seconds"] >= 1.0:
+                idle_periods.append(idle_period)
+                total_idle_frames += idle_period["duration_frames"]
+        
+        # Convert total frames to seconds
+        total_idle_time_seconds = total_idle_frames * seconds_per_frame
+        
+        return total_idle_time_seconds, idle_periods
+    
     def generate_heatmap(self, tracking_results, video_path, resolution=(500, 500)):
         """Generate a heatmap of employee movements.
         
@@ -204,12 +289,35 @@ class WarehouseAnalytics:
             # Count unique employees (track IDs)
             employee_count = track_count
             
-            # Calculate distance traveled per employee
+            # Get video FPS for time-based calculations
+            fps = 30.0  # Default value
+            try:
+                cap = cv2.VideoCapture(video_path)
+                if cap.isOpened():
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    if fps <= 0:
+                        fps = 30.0  # Fallback if fps is invalid
+                    cap.release()
+                print(f"Video FPS: {fps}")
+            except Exception as e:
+                print(f"Error getting video FPS: {str(e)}. Using default value of {fps}")
+            
+            # Calculate distance traveled and idle time per employee
             distance_traveled = {}
+            idle_time = {}
+            idle_periods_per_employee = {}
+            
             for track_id, positions in tracking_results.get("tracks", {}).items():
+                # Calculate distance
                 distance = self.calculate_distance(positions)
                 distance_traveled[f"employee_{track_id}"] = round(distance, 2)
                 print(f"Employee {track_id}: distance traveled = {distance:.2f} pixels")
+                
+                # Calculate idle time
+                total_idle_time, idle_periods = self.calculate_idle_time(positions, fps)
+                idle_time[f"employee_{track_id}"] = round(total_idle_time, 2)
+                idle_periods_per_employee[f"employee_{track_id}"] = idle_periods
+                print(f"Employee {track_id}: idle time = {total_idle_time:.2f} seconds, {len(idle_periods)} idle periods")
             
             # Generate heatmap
             heatmap_path = self.generate_heatmap(tracking_results, video_path)
@@ -219,6 +327,8 @@ class WarehouseAnalytics:
                 "video_path": video_path,
                 "employee_count": employee_count,
                 "distance_traveled": distance_traveled,
+                "idle_time": idle_time,
+                "idle_periods": idle_periods_per_employee,
                 "heatmap_image_path": heatmap_path,
                 "timestamp": datetime.now().isoformat()
             }
@@ -262,6 +372,7 @@ class WarehouseAnalytics:
                 "video_path": video_path,
                 "employee_count": 0,
                 "distance_traveled": {},
+                "idle_time": {},
                 "heatmap_image_path": heatmap_path or "",
                 "timestamp": datetime.now().isoformat(),
                 "error": str(e)

@@ -1,9 +1,29 @@
 {
   "videos": {
     "cctv_cafe.mp4": {
-      "last_analyzed": "2025-04-18T16:17:53.068633",
-      "results_file": "llm_results_cctv_cafe_20250418161753.json"
+      "last_analyzed": "2025-04-20T18:08:29.932656",
+      "results_file": "llm_results_cctv_cafe_20250420180829.json"
+    },
+    "warehouse_close.mp4": {
+      "last_analyzed": "2025-04-20T18:28:02.682700",
+      "results_file": "llm_results_warehouse_close_20250420182802.json"
+    },
+    "warehouse2.mp4": {
+      "last_analyzed": "2025-04-20T17:37:01.282176",
+      "results_file": "llm_results_warehouse2_20250420173701.json"
+    },
+    "cctv_cafe1.mp4": {
+      "last_analyzed": "2025-04-20T18:11:29.019354",
+      "results_file": "llm_results_cctv_cafe1_20250420181129.json"
+    },
+    "cctv_cafe2.mp4": {
+      "last_analyzed": "2025-04-20T18:16:43.706249",
+      "results_file": "llm_results_cctv_cafe2_20250420181643.json"
+    },
+    "cctv_cafe3.mp4": {
+      "last_analyzed": "2025-04-20T18:24:49.358886",
+      "results_file": "llm_results_cctv_cafe3_20250420182449.json"
     }
   },
-  "latest_video": "cctv_cafe.mp4"
+  "latest_video": "warehouse_close.mp4"
 }

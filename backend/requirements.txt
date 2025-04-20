@@ -14,3 +14,8 @@ pillow
 python-multipart
 huggingface_hub
 python-dotenv
+torch>=2.0.0
+transformers>=4.30.0
+pillow>=9.0.0
+einops
+timm
