@@ -9,8 +9,8 @@
       "results_file": "llm_results_warehouse_close_20250420182802.json"
     },
     "warehouse2.mp4": {
-      "last_analyzed": "2025-04-20T17:37:01.282176",
-      "results_file": "llm_results_warehouse2_20250420173701.json"
+      "last_analyzed": "2025-04-20T20:53:13.085247",
+      "results_file": "llm_results_warehouse2_20250420205313.json"
     },
     "cctv_cafe1.mp4": {
       "last_analyzed": "2025-04-20T18:11:29.019354",
@@ -25,5 +25,5 @@
       "results_file": "llm_results_cctv_cafe3_20250420182449.json"
     }
   },
-  "latest_video": "warehouse_close.mp4"
+  "latest_video": "warehouse2.mp4"
 }
