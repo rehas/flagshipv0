@@ -1,10 +1,10 @@
 #!/bin/bash
 
 VIDEO_NAMES=(
-#   "cctv_cafe.mp4"
-#   "cctv_cafe1.mp4"
+  "cctv_cafe.mp4"
+  "cctv_cafe1.mp4"
   "cctv_cafe2.mp4"
-#   "cctv_cafe3.mp4"
+  "cctv_cafe3.mp4"
   "warehouse2.mp4"
   "warehouse_close.mp4"
 )
@@ -49,6 +49,6 @@ do
     fi
   done
 
-  echo "Waiting 5 minutes before next video..."
-  sleep 300
+  echo "Waiting 3 minutes before next video..."
+  sleep 180
 done

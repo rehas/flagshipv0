@@ -343,12 +343,12 @@ class MultimodalLLMAnalyzer:
                 )
                 print(f"prompt: {prompt}")
                 # Actual API call with the retry mechanism active
-                generated_text = client.text_generation(prompt=prompt, model="mistralai/Mistral-7B-Instruct-v0.3")
+                generated_text = client.text_generation(prompt=prompt, model="meta-llama/Llama-3.1-8B-Instruct")
 
                 return {
                     "summary": generated_text,
                     "generated_at": datetime.now().isoformat(),
-                    "model_name": "mistralai/Mistral-7B-Instruct-v0.3"
+                    "model_name": "meta-llama/Llama-3.1-8B-Instruct"
                 }
             except Exception as e:
                 print(f"Error in _call_summary_llm: {str(e)}")
